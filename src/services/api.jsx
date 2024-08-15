@@ -1,28 +1,27 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Configura la URL base para la API
-const API_URL = 'http://192.168.10.102:8080/api'; // Ajusta según tu dominio
+const apiUrl = 'http://192.168.10.102:8080/api'; // Ajusta según tu URL
 
-const axiosInstance = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+const api = axios.create({
+  baseURL: apiUrl,
+  timeout: 10000, // Tiempo de espera en milisegundos
 });
 
-// Interceptor para añadir el token JWT a las solicitudes
-axiosInstance.interceptors.request.use(
+// Interceptor para agregar el token de autenticación en las solicitudes
+api.interceptors.request.use(
   async config => {
-    const token = await AsyncStorage.getItem('token'); // O la clave que estés usando para almacenar el token
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    try {
+      const token = await AsyncStorage.getItem('token'); // Obtén el token desde AsyncStorage
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.error('Error getting token from AsyncStorage:', error);
     }
     return config;
   },
-  error => {
-    return Promise.reject(error);
-  }
+  error => Promise.reject(error)
 );
 
-export default axiosInstance;
+export default api;

@@ -1,13 +1,20 @@
 //components/ModalRecoverPassword
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, StyleSheet } from 'react-native';
+import { resetPassword } from '../services/authService';
 
 const ModalRecoverPassword = ({ visible, onClose }) => {
   const [email, setEmail] = useState('');
 
-  const handleRecoverPassword = () => {
-    // Implement recover password functionality
-    onClose();
+  const handleRecoverPassword = async () => {
+    try {
+      await resetPassword(email);
+      // Manejar el éxito de la recuperación de contraseña, como cerrar el modal o mostrar mensaje
+      onClose();
+    } catch (error) {
+      // Manejar errores
+      console.error("Error en la recuperación de contraseña:", error);
+    }
   };
 
   return (

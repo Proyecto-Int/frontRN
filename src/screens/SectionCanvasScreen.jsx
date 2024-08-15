@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, Button, Alert, ScrollView } from 'react-native';
+// SectionCanvasScreen.jsx
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, StyleSheet, Alert } from 'react-native';
+import { getPostItsByCanvasId, createPostIt, updatePostIt, deletePostIt } from '../services/postItService'; // Asegúrate de que esta ruta sea correcta
 
 const SectionCanvasScreen = ({ route, navigation }) => {
   const { sectionName } = route.params;
@@ -7,128 +9,92 @@ const SectionCanvasScreen = ({ route, navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [newPostItText, setNewPostItText] = useState('');
-  const [editedPostItText, setEditedPostItText] = useState('');
   const [selectedPostIt, setSelectedPostIt] = useState(null);
-  const [nextId, setNextId] = useState(1);
 
-  // Agregar nuevo post-it
-  const handleAddPostIt = () => {
-    if (newPostItText.trim()) {
-      setPostIts([...postIts, { id: nextId, text: newPostItText }]);
-      setNextId(nextId + 1);
+  useEffect(() => {
+    const fetchPostIts = async () => {
+      try {
+        const postItsData = await getPostItsByCanvasId(sectionName); // Cambia esto si es necesario
+        setPostIts(postItsData);
+      } catch (error) {
+        console.error('Failed to fetch post-its:', error);
+      }
+    };
+
+    fetchPostIts();
+  }, [sectionName]);
+
+  const handleCreatePostIt = async () => {
+    try {
+      const newPostIt = { text: newPostItText };
+      await createPostIt(sectionName, newPostIt);
+      setPostIts([...postIts, newPostIt]);
       setNewPostItText('');
       setModalVisible(false);
+    } catch (error) {
+      console.error('Failed to create post-it:', error);
     }
   };
 
-  // Editar post-it
-  const handleEditPostIt = () => {
-    if (editedPostItText.trim() && selectedPostIt !== null) {
-      setPostIts(postIts.map(postIt =>
-        postIt.id === selectedPostIt ? { ...postIt, text: editedPostItText } : postIt
-      ));
-      setEditedPostItText('');
+  const handleEditPostIt = async () => {
+    try {
+      await updatePostIt(selectedPostIt.id, { text: newPostItText });
+      setPostIts(postIts.map(postIt => postIt.id === selectedPostIt.id ? { ...postIt, text: newPostItText } : postIt));
+      setNewPostItText('');
       setEditModalVisible(false);
-      setSelectedPostIt(null); // Ocultar el menú de opciones después de guardar
+    } catch (error) {
+      console.error('Failed to update post-it:', error);
     }
   };
 
-  // Eliminar post-it
-  const handleDeletePostIt = (id) => {
-    Alert.alert(
-      'Eliminar Post-it',
-      '¿Estás seguro de que quieres eliminar este post-it?',
-      [
-        {
-          text: 'Cancelar',
-          onPress: () => setSelectedPostIt(null),
-          style: 'cancel',
-        },
-        {
-          text: 'Eliminar',
-          onPress: () => {
-            const updatedPostIts = postIts.filter(postIt => postIt.id !== id);
-            setPostIts(updatedPostIts);
-            setSelectedPostIt(null);
-          },
-        },
-      ]
-    );
-  };
-
-  // Duplicar post-it
-  const handleDuplicatePostIt = (id) => {
-    const postItToDuplicate = postIts.find(postIt => postIt.id === id);
-    if (postItToDuplicate) {
-      setPostIts([...postIts, { id: nextId, text: postItToDuplicate.text }]);
-      setNextId(nextId + 1);
-      setSelectedPostIt(null); // Ocultar el menú de opciones después de duplicar
+  const handleDeletePostIt = async (postItId) => {
+    try {
+      await deletePostIt(postItId);
+      setPostIts(postIts.filter(postIt => postIt.id !== postItId));
+    } catch (error) {
+      console.error('Failed to delete post-it:', error);
     }
-  };
-
-  // Organizar Post-its en filas
-  const rows = [];
-  let currentRow = [];
-
-  postIts.forEach((postIt, index) => {
-    currentRow.push(postIt);
-    if (currentRow.length >= 3 || index === postIts.length - 1) {
-      rows.push(currentRow);
-      currentRow = [];
-    }
-  });
-
-  // Función para manejar la edición del post-it
-  const handlePostItPress = (postIt) => {
-    setSelectedPostIt(postIt.id);
-    setEditedPostItText(postIt.text);
-    setEditModalVisible(true);
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{sectionName}</Text>
+      <TouchableOpacity style={styles.createButton} onPress={() => setModalVisible(true)}>
+        <Text style={styles.createButtonText}>Crear Nuevo Post-It</Text>
+      </TouchableOpacity>
       <ScrollView>
-        {rows.map((row, rowIndex) => (
-          <View key={rowIndex} style={styles.row}>
-            {row.map((item) => (
-              <View key={item.id} style={styles.postIt}>
-                <TouchableOpacity
-                  style={styles.postItContent}
-                  onPress={() => handlePostItPress(item)}
-                  onLongPress={() => {
-                    setSelectedPostIt(item.id);
-                  }}
-                >
-                  <Text>{item.text}</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
+        {postIts.map((postIt, index) => (
+          <View key={index} style={styles.postItContainer}>
+            <Text>{postIt.text}</Text>
+            <TouchableOpacity onPress={() => { setSelectedPostIt(postIt); setEditModalVisible(true); }}>
+              <Text style={styles.editButton}>Editar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleDeletePostIt(postIt.id)}>
+              <Text style={styles.deleteButton}>Eliminar</Text>
+            </TouchableOpacity>
           </View>
         ))}
       </ScrollView>
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => setModalVisible(true)}
-      >
-        <Text style={styles.addButtonText}>Agregar Post-it</Text>
-      </TouchableOpacity>
       <Modal
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>Nuevo Post-it</Text>
+          <Text style={styles.modalTitle}>Nuevo Post-It</Text>
           <TextInput
             style={styles.input}
-            placeholder="Escribe tu post-it aquí"
+            placeholder="Contenido del Post-It"
             value={newPostItText}
             onChangeText={setNewPostItText}
           />
           <View style={styles.modalButtons}>
-            <Button title="Agregar" onPress={handleAddPostIt} />
-            <Button title="Cancelar" onPress={() => setModalVisible(false)} />
+            <TouchableOpacity style={styles.saveButton} onPress={handleCreatePostIt}>
+              <Text style={styles.buttonText}>Guardar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+              <Text style={styles.buttonText}>Cancelar</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -138,41 +104,23 @@ const SectionCanvasScreen = ({ route, navigation }) => {
         onRequestClose={() => setEditModalVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>Editar Post-it</Text>
+          <Text style={styles.modalTitle}>Editar Post-It</Text>
           <TextInput
             style={styles.input}
-            placeholder="Edita tu post-it aquí"
-            value={editedPostItText}
-            onChangeText={setEditedPostItText}
+            placeholder="Contenido del Post-It"
+            value={newPostItText}
+            onChangeText={setNewPostItText}
           />
           <View style={styles.modalButtons}>
-            <Button title="Guardar" onPress={handleEditPostIt} />
-            <Button title="Cancelar" onPress={() => setEditModalVisible(false)} />
+            <TouchableOpacity style={styles.saveButton} onPress={handleEditPostIt}>
+              <Text style={styles.buttonText}>Guardar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => setEditModalVisible(false)}>
+              <Text style={styles.buttonText}>Cancelar</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
-      {selectedPostIt !== null && (
-        <View style={styles.optionsMenu}>
-          <TouchableOpacity
-            style={styles.optionButton}
-            onPress={() => handleDuplicatePostIt(selectedPostIt)}
-          >
-            <Text style={styles.optionButtonText}>Duplicar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.optionButton}
-            onPress={() => handleDeletePostIt(selectedPostIt)}
-          >
-            <Text style={styles.optionButtonText}>Eliminar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.optionButton}
-            onPress={() => setSelectedPostIt(null)}
-          >
-            <Text style={styles.optionButtonText}>Cancelar</Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </View>
   );
 };
@@ -181,93 +129,81 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#f2f2f2',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
-    textAlign: 'center',
   },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  postIt: {
-    width: 100,
-    height: 100,
-    backgroundColor: '#fffbcc',
-    borderRadius: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-  },
-  postItContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 10,
-  },
-  addButton: {
+  createButton: {
     backgroundColor: '#007bff',
     padding: 10,
     borderRadius: 5,
-    justifyContent: 'center',
     alignItems: 'center',
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
+    marginBottom: 15,
   },
-  addButtonText: {
+  createButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+  },
+  postItContainer: {
+    backgroundColor: '#f8f9fa',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  editButton: {
+    color: '#007bff',
+    marginTop: 10,
+  },
+  deleteButton: {
+    color: '#dc3545',
+    marginTop: 10,
   },
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 20,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 20,
+    color: '#fff',
   },
   input: {
-    width: '80%',
     height: 40,
-    borderColor: '#ccc',
+    width: '100%',
+    borderColor: '#ddd',
     borderWidth: 1,
     borderRadius: 5,
-    padding: 10,
-    marginBottom: 20,
+    paddingHorizontal: 10,
+    marginBottom: 15,
     backgroundColor: '#fff',
   },
   modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '80%',
+    justifyContent: 'space-between',
+    width: '100%',
   },
-  optionsMenu: {
-    position: 'absolute',
-    bottom: 80,
-    right: 20,
-    backgroundColor: '#fff',
+  saveButton: {
+    backgroundColor: '#28a745',
+    padding: 10,
     borderRadius: 5,
-    padding: 10,
-    elevation: 10,
-    zIndex: 1,
+    width: '48%',
+    alignItems: 'center',
   },
-  optionButton: {
+  cancelButton: {
+    backgroundColor: '#dc3545',
     padding: 10,
+    borderRadius: 5,
+    width: '48%',
+    alignItems: 'center',
   },
-  optionButtonText: {
-    color: '#007bff',
+  buttonText: {
+    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },

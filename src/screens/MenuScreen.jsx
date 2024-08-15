@@ -1,20 +1,49 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, TextInput, ScrollView } from 'react-native';
-import MapItem from '../components/MapItem';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, StyleSheet } from 'react-native';
+import { getAllCanvases, createCanvas } from '../services/canvasService'; // Asegúrate de que esta ruta sea correcta
+import MapItem from '../components/MapItem'; // Ruta correcta
 
 const MenuScreen = ({ navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [mapName, setMapName] = useState('');
   const [mapDescription, setMapDescription] = useState('');
   const [maps, setMaps] = useState([]);
+  const userId = 1; // Aquí debes obtener el ID del usuario de tu contexto o estado global
 
-  const handleCreateMap = () => {
-    const newMap = { name: mapName, description: mapDescription };
-    setMaps([...maps, newMap]);
-    setMapName('');
-    setMapDescription('');
-    setModalVisible(false);
-    navigation.navigate('WorkbenchScreen', newMap);
+  useEffect(() => {
+    const fetchCanvases = async () => {
+      try {
+        const canvases = await getAllCanvases();
+        if (Array.isArray(canvases)) {
+          setMaps(canvases);
+        } else {
+          console.error('Expected an array but received:', canvases);
+        }
+      } catch (error) {
+        console.error('Failed to fetch canvases:', error);
+      }
+    };
+
+    fetchCanvases();
+  }, []);
+
+  const handleCreateMap = async () => {
+    try {
+      const newMap = {
+        name: mapName,
+        description: mapDescription,
+        dateCreated: new Date().toISOString(), // Genera la fecha actual en formato ISO 8601
+        user: { id: userId }, // Incluye el ID del usuario
+      };
+      const createdMap = await createCanvas(newMap); // Obtén el mapa creado del backend
+      setMaps(prevMaps => [...prevMaps, createdMap]); // Agrega el mapa creado a la lista de mapas
+      setMapName('');
+      setMapDescription('');
+      setModalVisible(false);
+      navigation.navigate('WorkbenchScreen', createdMap);
+    } catch (error) {
+      console.error('Failed to create canvas:', error);
+    }
   };
 
   return (
@@ -24,7 +53,7 @@ const MenuScreen = ({ navigation }) => {
         <Text style={styles.createButtonText}>Crear Nuevo Mapa de Empatía</Text>
       </TouchableOpacity>
       <ScrollView>
-        {maps.map((map, index) => (
+        {Array.isArray(maps) && maps.map((map, index) => (
           <MapItem key={index} map={map} onSelect={() => navigation.navigate('WorkbenchScreen', map)} />
         ))}
       </ScrollView>
@@ -64,25 +93,22 @@ const MenuScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
     padding: 20,
   },
   title: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
   },
   createButton: {
-    backgroundColor: '#007BFF',
-    padding: 15,
+    backgroundColor: '#007bff',
+    padding: 10,
     borderRadius: 5,
-    marginBottom: 20,
     alignItems: 'center',
   },
   createButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
   },
   modalContainer: {
     flex: 1,
