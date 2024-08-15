@@ -4,7 +4,7 @@ import { View, Text, ScrollView, TouchableOpacity, Modal, TextInput, StyleSheet,
 import { getPostItsByCanvasId, createPostIt, updatePostIt, deletePostIt } from '../services/postItService'; // Asegúrate de que esta ruta sea correcta
 
 const SectionCanvasScreen = ({ route, navigation }) => {
-  const { sectionName } = route.params;
+  const { sectionName, canvasId } = route.params;
   const [postIts, setPostIts] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -14,7 +14,7 @@ const SectionCanvasScreen = ({ route, navigation }) => {
   useEffect(() => {
     const fetchPostIts = async () => {
       try {
-        const postItsData = await getPostItsByCanvasId(sectionName); // Cambia esto si es necesario
+        const postItsData = await getPostItsByCanvasId(canvasId, sectionName); // Cambia esto si es necesario
         setPostIts(postItsData);
       } catch (error) {
         console.error('Failed to fetch post-its:', error);
@@ -22,12 +22,12 @@ const SectionCanvasScreen = ({ route, navigation }) => {
     };
 
     fetchPostIts();
-  }, [sectionName]);
+  }, [canvasId, sectionName]);
 
   const handleCreatePostIt = async () => {
     try {
-      const newPostIt = { text: newPostItText };
-      await createPostIt(sectionName, newPostIt);
+      const newPostIt = { text: newPostItText, quadrantId: sectionName, canvasId }; // Incluye canvasId
+      await createPostIt(newPostIt);
       setPostIts([...postIts, newPostIt]);
       setNewPostItText('');
       setModalVisible(false);
@@ -63,8 +63,8 @@ const SectionCanvasScreen = ({ route, navigation }) => {
         <Text style={styles.createButtonText}>Crear Nuevo Post-It</Text>
       </TouchableOpacity>
       <ScrollView>
-        {postIts.map((postIt, index) => (
-          <View key={index} style={styles.postItContainer}>
+        {postIts.map((postIt) => (
+          <View key={postIt.id} style={styles.postItContainer}>
             <Text>{postIt.text}</Text>
             <TouchableOpacity onPress={() => { setSelectedPostIt(postIt); setEditModalVisible(true); }}>
               <Text style={styles.editButton}>Editar</Text>

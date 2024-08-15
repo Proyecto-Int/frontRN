@@ -2,49 +2,22 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 
 const WorkbenchScreen = ({ route, navigation }) => {
-  const { name: mapName, description } = route.params || {};
+  const { name: mapName, description, canvasId } = route.params || {};
 
   return (
     <View style={styles.container}>
       {mapName && <Text style={styles.title}>{mapName}</Text>}
       {description && <Text style={styles.description}>{description}</Text>}
       <ScrollView contentContainerStyle={styles.gridContainer}>
-        <TouchableOpacity 
-          style={styles.section} 
-          onPress={() => navigation.navigate('SectionCanvasScreen', { sectionName: '¿Qué piensa y siente?' })}
-        >
-          <Text style={styles.sectionTitle}>¿Qué piensa y siente?</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.section} 
-          onPress={() => navigation.navigate('SectionCanvasScreen', { sectionName: '¿Qué ve?' })}
-        >
-          <Text style={styles.sectionTitle}>¿Qué ve?</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.section} 
-          onPress={() => navigation.navigate('SectionCanvasScreen', { sectionName: '¿Qué dice y hace?' })}
-        >
-          <Text style={styles.sectionTitle}>¿Qué dice y hace?</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.section} 
-          onPress={() => navigation.navigate('SectionCanvasScreen', { sectionName: '¿Qué oye?' })}
-        >
-          <Text style={styles.sectionTitle}>¿Qué oye?</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.section} 
-          onPress={() => navigation.navigate('SectionCanvasScreen', { sectionName: 'Esfuerzos' })}
-        >
-          <Text style={styles.sectionTitle}>Esfuerzos</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.section} 
-          onPress={() => navigation.navigate('SectionCanvasScreen', { sectionName: 'Beneficios' })}
-        >
-          <Text style={styles.sectionTitle}>Beneficios</Text>
-        </TouchableOpacity>
+        {['¿Qué piensa y siente?', '¿Qué ve?', '¿Qué dice y hace?', '¿Qué oye?', 'Esfuerzos', 'Beneficios'].map((sectionName) => (
+          <TouchableOpacity 
+            key={sectionName}
+            style={styles.section} 
+            onPress={() => navigation.navigate('SectionCanvasScreen', { sectionName, canvasId })}
+          >
+            <Text style={styles.sectionTitle}>{sectionName}</Text>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
       <View style={styles.menu}>
         <TouchableOpacity 
